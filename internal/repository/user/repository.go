@@ -9,10 +9,11 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/katyafirstova/auth_service/internal/client/db"
 	"github.com/katyafirstova/auth_service/internal/model"
+	"github.com/katyafirstova/auth_service/internal/repository"
 	"github.com/katyafirstova/auth_service/internal/repository/user/converter"
 	modelRepo "github.com/katyafirstova/auth_service/internal/repository/user/model"
 )
@@ -29,10 +30,10 @@ const (
 )
 
 type repo struct {
-	db *pgxpool.Pool
+	db db.Client
 }
 
-func NewRepository(db *pgxpool.Pool) *repo {
+func NewRepository(db db.Client) repository.UserRepository {
 	return &repo{db: db}
 }
 
@@ -53,8 +54,13 @@ func (r *repo) Create(ctx context.Context, req model.CreateUser) (string, error)
 		return "", err
 	}
 
+	q := db.Query{
+		Name:     "user_repository_Create",
+		QueryRow: query,
+	}
+
 	var newUUID string
-	err = r.db.QueryRow(ctx, query, args...).Scan(&newUUID)
+	err = r.db.DB().QueryRowContext(ctx, q, args...).Scan(&newUUID)
 	if err != nil {
 		return "", err
 	}
@@ -78,7 +84,12 @@ func (r *repo) Get(ctx context.Context, uuid string) (model.User, error) {
 
 	var user modelRepo.User
 
-	err = r.db.QueryRow(ctx, query, args...).Scan(&user.UUID, &user.Name, &user.Email, &user.Role, &user.CreatedAt, &user.UpdatedAt)
+	q := db.Query{
+		Name:     "user_repository_Get",
+		QueryRow: query,
+	}
+
+	err = r.db.DB().ScanOneContext(ctx, &user, q, args...)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.User{}, errors.New("user not found")
@@ -112,7 +123,12 @@ func (r *repo) Update(ctx context.Context, uuid string, req model.UpdateUser) er
 		return err
 	}
 
-	_, err = r.db.Exec(ctx, query, args...)
+	q := db.Query{
+		Name:     "user_repository_Update",
+		QueryRow: query,
+	}
+
+	_, err = r.db.DB().ExecContext(ctx, q, args)
 	if err != nil {
 		return err
 	}
@@ -130,7 +146,13 @@ func (r *repo) Delete(ctx context.Context, uuid string) error {
 		return err
 	}
 
-	_, err = r.db.Exec(ctx, query, args...)
+	q := db.Query{
+		Name:     "user_repository_Delete",
+		QueryRow: query,
+	}
+
+	_, err = r.db.DB().ExecContext(ctx, q, args)
+
 	if err != nil {
 		return err
 	}
