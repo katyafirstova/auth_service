@@ -36,7 +36,7 @@ func TestDelete(t *testing.T) {
 			Uuid: uuid,
 		}
 
-		serviceErr = fmt.Errorf("Service error")
+		serviceErr = fmt.Errorf("service error")
 	)
 	defer t.Cleanup(mc.Finish)
 

@@ -38,7 +38,7 @@ func TestUpdate(t *testing.T) {
 		email = gofakeit.Email()
 		role  = gofakeit.IntRange(0, 2)
 
-		serviceErr = fmt.Errorf("Service error")
+		serviceErr = fmt.Errorf("service error")
 
 		req = &desc.UpdateRequest{
 			Uuid:  uuid,

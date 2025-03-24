@@ -9,60 +9,48 @@ import (
 	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/require"
 
-	"github.com/katyafirstova/auth_service/internal/model"
 	"github.com/katyafirstova/auth_service/internal/repository"
 	serviceMocks "github.com/katyafirstova/auth_service/internal/service/mocks"
 	"github.com/katyafirstova/auth_service/internal/service/user"
 )
 
-func TestCreate(t *testing.T) {
+func TestDelete(t *testing.T) {
 	t.Parallel()
 	type userRepositoryMockFunc func(mc *minimock.Controller) repository.UserRepository
 
 	type args struct {
 		ctx context.Context
-		req model.CreateUser
+		req string
 	}
 
 	var (
 		ctx = context.Background()
 		mc  = minimock.NewController(t)
 
-		uuid     = gofakeit.UUID()
-		name     = gofakeit.Word()
-		email    = gofakeit.Email()
-		password = gofakeit.Password(true, false, false, false, false, 32)
-		role     = gofakeit.IntRange(0, 2)
+		uuid = gofakeit.UUID()
 
 		repoErr = fmt.Errorf("repo error")
-
-		req = &model.CreateUser{
-			Name:            name,
-			Email:           email,
-			Password:        password,
-			PasswordConfirm: password,
-			Role:            model.Role(role),
-		}
 	)
 	defer t.Cleanup(mc.Finish)
 
 	tests := []struct {
 		name         string
 		args         args
-		want         string
+		want         error
 		err          error
 		userRepoMock userRepositoryMockFunc
 	}{
 		{
 			name: "success case",
 			args: args{
-				ctx: ctx, req: *req,
+				ctx: ctx,
+				req: uuid,
 			},
-			want: uuid,
+			want: nil,
 			err:  nil,
 			userRepoMock: func(mc *minimock.Controller) repository.UserRepository {
 				mock := serviceMocks.NewUserServiceMock(mc)
-				mock.CreateMock.Expect(ctx, *req).Return(uuid, nil)
+				mock.DeleteMock.Expect(ctx, uuid).Return(nil)
 				return mock
 			},
 		},
@@ -70,13 +58,13 @@ func TestCreate(t *testing.T) {
 			name: "repo error case",
 			args: args{
 				ctx: ctx,
-				req: *req,
+				req: uuid,
 			},
-			want: "",
+			want: repoErr,
 			err:  repoErr,
 			userRepoMock: func(mc *minimock.Controller) repository.UserRepository {
 				mock := serviceMocks.NewUserServiceMock(mc)
-				mock.CreateMock.Expect(ctx, *req).Return("", repoErr)
+				mock.DeleteMock.Expect(ctx, uuid).Return(repoErr)
 				return mock
 			},
 		},
@@ -90,9 +78,9 @@ func TestCreate(t *testing.T) {
 			userServiceMock := tt.userRepoMock(mc)
 			service := user.NewMockService(userServiceMock)
 
-			newID, err := service.Create(tt.args.ctx, tt.args.req)
+			err := service.Delete(tt.args.ctx, tt.args.req)
 			require.Equal(t, tt.err, err)
-			require.Equal(t, tt.want, newID)
+			require.Equal(t, tt.want, err)
 		})
 	}
 }
